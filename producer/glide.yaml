@@ -1,0 +1,6 @@
+package: github.com/KafkaService/producer
+import:
+- package: github.com/confluentinc/confluent-kafka-go
+  version: v1.3.0
+  subpackages:
+  - kafka
