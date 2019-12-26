@@ -1,6 +1,4 @@
 package: github.com/KafkaService/producer
 import:
-- package: github.com/confluentinc/confluent-kafka-go
-  version: v1.3.0
-  subpackages:
-  - kafka
+- package: github.com/Shopify/sarama
+  version: v1.24.1

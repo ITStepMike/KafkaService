@@ -1,6 +1,4 @@
 package: github.com/KafkaService/consumer
 import:
-- package: github.com/confluentinc/confluent-kafka-go
-  version: v1.3.0
-  subpackages:
-  - kafka
+- package: github.com/bsm/sarama-cluster
+  version: f7d869db45fd8d74bf62c02a9d17637f945668d0
