@@ -1,0 +1,4 @@
+package: github.com/KafkaService/producer
+import:
+- package: github.com/Shopify/sarama
+  version: v1.24.1
