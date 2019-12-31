@@ -18,10 +18,6 @@ var Producer sarama.SyncProducer
 
 var Consumer *cluster.Consumer
 
-type User struct {
-	Name string `json:"name"`
-}
-
 var brokerPath = "kafka:9092"
 
 func main() {
