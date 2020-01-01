@@ -1,14 +1,14 @@
 package config
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
 
 	"github.com/KafkaService/api/models"
-	"gopkg.in/yaml.v2"
 )
 
-var flattenersConfigPath = "./config/flattenersConfig.yml"
+var flattenersConfigPath = "./config/flattenersConfig.json"
 
 //InitFlattenersConfig read basic flattener's config with input and destination topics
 func InitFlattenersConfig(config *models.FlattenersConfig) error {
@@ -23,7 +23,7 @@ func InitFlattenersConfig(config *models.FlattenersConfig) error {
 		return err
 	}
 
-	err = yaml.Unmarshal(yamlConfig, config)
+	err = json.Unmarshal(yamlConfig, config)
 	if err != nil {
 		return err
 	}
