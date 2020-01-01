@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/KafkaService/consumer/models"
+	"github.com/KafkaService/api/models"
 	"gopkg.in/yaml.v2"
 )
 

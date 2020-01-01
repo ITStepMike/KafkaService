@@ -9,9 +9,9 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/KafkaService/consumer/config"
+	"github.com/KafkaService/api/config"
 
-	"github.com/KafkaService/consumer/models"
+	"github.com/KafkaService/api/models"
 	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
 )

@@ -1,4 +1,4 @@
-package: github.com/KafkaService/consumer
+package: github.com/KafkaService/api
 import:
 - package: github.com/Shopify/sarama
   version: v1.24.1
