@@ -9,29 +9,39 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/KafkaService/consumer/config"
+
 	"github.com/KafkaService/consumer/models"
 	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
 )
 
+//Producer for publishing
 var Producer sarama.SyncProducer
 
+//Consumer for subscribing
 var Consumer *cluster.Consumer
 
-var brokerPath = "kafka:9092"
+//Config for flatteners communication with kafka
+var Config models.FlattenersConfig
 
 func main() {
 
+	err := config.InitFlattenersConfig(&Config)
+	if err != nil {
+		panic(err)
+	}
+
 	setupProducer()
+
 	defer func() {
 		if err := Producer.Close(); err != nil {
 			panic(err)
 		}
 	}()
 
-	fmt.Println(brokerPath)
-
 	setupConsumer()
+
 	defer Consumer.Close()
 
 	// trap SIGINT to trigger a shutdown.
@@ -80,8 +90,10 @@ func main() {
 					fmt.Printf("Error is %v\n", err)
 					break
 				}
-				sendMessage(incomingMessage.DestinationTopic, string(message))
-				Consumer.MarkOffset(msg, "") // mark message as processed
+				for _, v := range Config.DestinationTopics {
+					sendMessage(v, string(message))
+					Consumer.MarkOffset(msg, "") // mark message as processed
+				}
 			}
 		case <-signals:
 			return
@@ -92,7 +104,7 @@ func main() {
 
 func setupProducer() {
 
-	producerBrokers := []string{brokerPath}
+	producerBrokers := []string{Config.BrokerAddress}
 	//setup relevant config info
 	producerConfig := sarama.NewConfig()
 	producerConfig.Producer.Partitioner = sarama.NewRandomPartitioner
@@ -117,7 +129,7 @@ func setupConsumer() {
 	config.Group.Return.Notifications = true
 
 	// init consumer
-	brokers := []string{brokerPath}
+	brokers := []string{Config.BrokerAddress}
 	topics := []string{"test1"}
 	consumer, err := cluster.NewConsumer(brokers, "my-consumer-group", topics, config)
 	if err != nil {
@@ -159,6 +171,6 @@ func sendMessage(topic string, message string) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Message is stored in topic(%s)/partition(%d)/offset(%d)\n", topic, partition, offset)
+	fmt.Printf("Message is stored in topic(%s)/partition(%d)/offset(%d)\n\n", topic, partition, offset)
 
 }

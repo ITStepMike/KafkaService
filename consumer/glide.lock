@@ -1,8 +1,8 @@
-hash: 7abebf8f5aa5dd77e5069c896af53e1d26e13ce4c2044e3ac54dd785f72b0df8
-updated: 2019-12-26T16:45:15.364022109+02:00
+hash: 50a48f7988a00ca054aa0b2adb1e7932e24d56b984d61d1888bc23b9b319f570
+updated: 2020-01-01T16:16:00.890912279+02:00
 imports:
 - name: github.com/bsm/sarama-cluster
-  version: f7d869db45fd8d74bf62c02a9d17637f945668d0
+  version: c618e605e15c0d7535f6c96ff8efbb0dba4fd66c
 - name: github.com/davecgh/go-spew
   version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
   subpackages:
@@ -92,4 +92,6 @@ imports:
   subpackages:
   - mstypes
   - ndr
+- name: gopkg.in/yaml.v2
+  version: 1f64d6156d11335c3f22d9330b0ad14fc1e789ce
 testImports: []
