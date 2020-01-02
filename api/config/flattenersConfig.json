@@ -1,5 +1,5 @@
 {
-    "brokerAddress" : "kafka:9092",
+    "brokerAddress" : "localhost:9092",
     "inputTopics" : [
         "test1"
     ],

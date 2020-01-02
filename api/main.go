@@ -10,7 +10,6 @@ import (
 	"os/signal"
 
 	"github.com/KafkaService/api/config"
-
 	"github.com/KafkaService/api/models"
 	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
@@ -27,20 +26,23 @@ var Config models.FlattenersConfig
 
 func main() {
 
-	err := config.InitFlattenersConfig(&Config)
-	if err != nil {
-		panic(err)
+	if err := setupConfig(&Config); err != nil {
+		fmt.Println(err)
 	}
 
-	setupProducer()
+	if err := setupProducer([]string{Config.BrokerAddress}); err != nil {
+		fmt.Println(err)
+	}
 
 	defer func() {
 		if err := Producer.Close(); err != nil {
-			panic(err)
+			fmt.Println(err)
 		}
 	}()
 
-	setupConsumer()
+	if err := setupConsumer([]string{Config.BrokerAddress}); err != nil {
+		fmt.Println(err)
+	}
 
 	defer Consumer.Close()
 
@@ -92,8 +94,8 @@ func main() {
 				}
 				for _, v := range Config.DestinationTopics {
 					sendMessage(v, string(message))
-					Consumer.MarkOffset(msg, "") // mark message as processed
 				}
+				Consumer.MarkOffset(msg, "") // mark message as processed
 			}
 		case <-signals:
 			return
@@ -102,9 +104,20 @@ func main() {
 
 }
 
-func setupProducer() {
+func setupConfig(flatterConfig *models.FlattenersConfig) error {
 
-	producerBrokers := []string{Config.BrokerAddress}
+	err := config.InitFlattenersConfig(flatterConfig)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func setupProducer(brokerAddress []string) error {
+
+	producerBrokers := brokerAddress
 	//setup relevant config info
 	producerConfig := sarama.NewConfig()
 	producerConfig.Producer.Partitioner = sarama.NewRandomPartitioner
@@ -114,14 +127,15 @@ func setupProducer() {
 
 	producer, err := sarama.NewSyncProducer(producerBrokers, producerConfig)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	Producer = producer
 
+	return nil
 }
 
-func setupConsumer() {
+func setupConsumer(brokerAddress []string) error {
 
 	// init (custom) config, enable errors and notifications
 	config := cluster.NewConfig()
@@ -129,15 +143,16 @@ func setupConsumer() {
 	config.Group.Return.Notifications = true
 
 	// init consumer
-	brokers := []string{Config.BrokerAddress}
+	brokers := brokerAddress
 	topics := []string{"test1"}
 	consumer, err := cluster.NewConsumer(brokers, "my-consumer-group", topics, config)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	Consumer = consumer
 
+	return nil
 }
 
 //formatIncomingMessage formats incoming message from producer and seds it back to the destination topic
@@ -169,7 +184,7 @@ func sendMessage(topic string, message string) {
 
 	partition, offset, err := Producer.SendMessage(msg)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 	fmt.Printf("Message is stored in topic(%s)/partition(%d)/offset(%d)\n\n", topic, partition, offset)
 

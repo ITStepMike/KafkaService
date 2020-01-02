@@ -1,10 +1,10 @@
 package main
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/KafkaService/api/models"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFormatIncomingMessageOK(t *testing.T) {
@@ -57,47 +57,37 @@ func TestFormatIncomingMessageOK(t *testing.T) {
 	}
 
 	destinationMessages, err := formatIncomingMessage(&incomingMessageOK)
-	if err != nil {
-		t.Errorf("Formatting message is incorrect got: %v, want: %v", err, nil)
-		return
-	}
 
-	if len(destinationMessages) != len(destinationMessagesOK) {
-		t.Errorf("Formatting message is incorrect (length is different)\n  got: %v,\n want: %v", destinationMessages, destinationMessagesOK)
-		return
-	}
+	assert.Nil(t, err)
 
-	for k := 0; k < len(destinationMessagesOK); k++ {
-		switch {
-		case destinationMessages[k].Data.Name != destinationMessagesOK[k].Data.Name:
-			t.Errorf("Formatting message incorrect\n  got: %v,\n want: %v", destinationMessages, destinationMessagesOK)
-			return
-		case destinationMessages[k].Data.DriveType != destinationMessagesOK[k].Data.DriveType:
-			t.Errorf("Formatting message incorrect\n  got: %v,\n want: %v", destinationMessages, destinationMessagesOK)
-			return
-		case destinationMessages[k].Data.UsedSpaceBytes != destinationMessagesOK[k].Data.UsedSpaceBytes:
-			t.Errorf("Formatting message incorrect\n  got: %v,\n want: %v", destinationMessages, destinationMessagesOK)
-			return
-		case destinationMessages[k].Data.TotalSpaceBytes != destinationMessagesOK[k].Data.TotalSpaceBytes:
-			t.Errorf("Formatting message incorrect\n  got: %v,\n want: %v", destinationMessages, destinationMessagesOK)
-			return
-		case destinationMessages[k].Data.CreateAtTimeUTC != destinationMessagesOK[k].Data.CreateAtTimeUTC:
-			t.Errorf("Formatting message incorrect\n  got: %v,\n want: %v", destinationMessages, destinationMessagesOK)
-			return
-		}
-	}
+	assert.Equal(t, destinationMessages, destinationMessagesOK)
 
 }
 
 func TestFormatIncomingMessageNilError(t *testing.T) {
 
 	_, err := formatIncomingMessage(nil)
-	if err == nil {
-		t.Errorf("Formatting message is incorrect got: %v, want: %v", err, errors.New("Incoming message is empty"))
-		return
-	} else if err != nil && err.Error() != "Incoming message is empty" {
-		t.Errorf("Formatting message is incorrect got: %v, want: %v", err, errors.New("Incoming message is empty"))
-		return
-	}
+
+	assert.NotEqual(t, err, nil)
+
+	assert.Equal(t, err.Error(), "Incoming message is empty")
+
+}
+
+func TestSetupConfigOK(t *testing.T) {
+
+	config := models.FlattenersConfig{}
+
+	err := setupConfig(&config)
+
+	assert.Nil(t, err)
+
+}
+
+func TestSetupConfigError(t *testing.T) {
+
+	err := setupConfig(nil)
+
+	assert.NotEqual(t, err, nil)
 
 }
