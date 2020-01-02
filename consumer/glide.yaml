@@ -1,4 +1,0 @@
-package: github.com/KafkaService/consumer
-import:
-- package: github.com/bsm/sarama-cluster
-  version: f7d869db45fd8d74bf62c02a9d17637f945668d0

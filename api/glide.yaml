@@ -1,0 +1,8 @@
+package: github.com/KafkaService/api
+import:
+- package: github.com/Shopify/sarama
+  version: v1.24.1
+- package: github.com/bsm/sarama-cluster
+  version: v2.1.15
+- package: gopkg.in/yaml.v2
+  version: v2.2.7

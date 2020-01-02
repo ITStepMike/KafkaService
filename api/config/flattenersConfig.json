@@ -1,0 +1,10 @@
+{
+    "brokerAddress" : "localhost:9092",
+    "inputTopics" : [
+        "test1"
+    ],
+    "destinationTopics" : [
+        "test2",
+        "test3"
+    ]
+}
