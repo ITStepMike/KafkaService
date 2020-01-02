@@ -144,7 +144,7 @@ func setupConsumer() {
 func formatIncomingMessage(incomingMessage *models.IncomingMessage) ([]models.DestinationMessage, error) {
 
 	if incomingMessage == nil {
-		return nil, errors.New("Incoming message is empty (nil)")
+		return nil, errors.New("Incoming message is empty")
 	}
 
 	destinationMessages := make([]models.DestinationMessage, len(incomingMessage.Message.Partitions))
@@ -154,7 +154,7 @@ func formatIncomingMessage(incomingMessage *models.IncomingMessage) ([]models.De
 		destinationMessages[i].Data.DriveType = incomingMessage.Message.Partitions[i].DriveType
 		destinationMessages[i].Data.UsedSpaceBytes = incomingMessage.Message.Partitions[i].Metric.UsedSpaceBytes
 		destinationMessages[i].Data.TotalSpaceBytes = incomingMessage.Message.Partitions[i].Metric.TotalSpaceBytes
-		destinationMessages[i].Data.CreateAtTimeUTC = incomingMessage.Message.CreatedAtTimeUTC
+		destinationMessages[i].Data.CreateAtTimeUTC = incomingMessage.Message.CreateAtTimeUTC
 	}
 
 	return destinationMessages, nil
