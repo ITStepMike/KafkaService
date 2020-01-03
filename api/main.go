@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/KafkaService/api/models"
 	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
+	log "github.com/sirupsen/logrus"
 )
 
 //Producer for publishing
@@ -26,22 +26,29 @@ var Config models.FlattenersConfig
 
 func main() {
 
+	f, err := os.OpenFile("test.log", os.O_WRONLY|os.O_CREATE, 0755)
+	if err != nil {
+		log.Errorf("Error while setting log output to the file")
+	}
+	log.SetOutput(f)
+	log.SetLevel(log.TraceLevel)
+
 	if err := setupConfig(&Config); err != nil {
-		fmt.Println(err)
+		log.Errorf("Setting up config failed with error: %v\n", err)
 	}
 
 	if err := setupProducer([]string{Config.BrokerAddress}); err != nil {
-		fmt.Println(err)
+		log.Errorf("Setting up producer failed with error: %v\n", err)
 	}
 
 	defer func() {
 		if err := Producer.Close(); err != nil {
-			fmt.Println(err)
+			log.Infof("Connection with producer has been closed: %v\n", err)
 		}
 	}()
 
 	if err := setupConsumer([]string{Config.BrokerAddress}); err != nil {
-		fmt.Println(err)
+		log.Error(fmt.Sprintf("Setting up consumer failed with error: %v", err))
 	}
 
 	defer Consumer.Close()
@@ -53,14 +60,14 @@ func main() {
 	// consume errors
 	go func() {
 		for err := range Consumer.Errors() {
-			log.Printf("Error: %s\n", err.Error())
+			log.Errorf("Consumer error: %s\n", err.Error())
 		}
 	}()
 
 	// consume notifications
 	go func() {
 		for ntf := range Consumer.Notifications() {
-			log.Printf("Rebalanced: %+v\n", ntf)
+			log.Infof("Rebalanced: %+v\n", ntf)
 		}
 	}()
 
@@ -69,33 +76,39 @@ func main() {
 		select {
 		case msg, ok := <-Consumer.Messages():
 			if ok {
-				fmt.Fprintf(os.Stdout, "%s/%d/%d\t%s\t%s\n", msg.Topic, msg.Partition, msg.Offset, msg.Key, msg.Value)
+				log.Infof("%s/%d/%d\t%s\t%s\n", msg.Topic, msg.Partition, msg.Offset, msg.Key, msg.Value)
 				var incomingMessage models.IncomingMessage
 
+				log.Traceln("Decoding incoming message ...")
 				err := json.NewDecoder(bytes.NewReader(msg.Value)).Decode(&incomingMessage)
 				if err != nil {
-					fmt.Printf("Error is %v\n", err)
+					log.Warnf("Error while decoding incoming message: %v\n", err)
 					break
 				}
+				log.Tracef("Incoming message has beed decoded properly: %v\n", incomingMessage)
 
-				fmt.Printf("\n\n %v \n\n", incomingMessage)
+				log.Traceln("Formatting incoming message to destination message ...")
 				resp, err := formatIncomingMessage(&incomingMessage)
 				if err != nil {
-					fmt.Printf("Error is %v\n", err)
+					log.Warnf("Error while formatting incoming message: %v\n", err)
 					break
 				}
+				log.Tracef("Formatting incoming message to destination message finished: %v\n", incomingMessage)
 
-				fmt.Println(resp)
-
+				log.Traceln("Formatting destination message before sending to the kafka broker ...")
 				message, err := json.Marshal(resp)
 				if err != nil {
-					fmt.Printf("Error is %v\n", err)
+					log.Warnf("Error while formatting destination message: %v\n", err)
 					break
 				}
+				log.Traceln("Formatting destination message finished")
+
+				log.Traceln("Sending messages to the kafka")
 				for _, v := range Config.DestinationTopics {
 					sendMessage(v, string(message))
 				}
 				Consumer.MarkOffset(msg, "") // mark message as processed
+				log.Traceln("Sending has been finished")
 			}
 		case <-signals:
 			return
