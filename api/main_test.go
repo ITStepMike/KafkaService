@@ -116,20 +116,21 @@ func TestFormatIncomingMessageNilError(t *testing.T) {
 
 }
 
-func TestSetupConfigOK(t *testing.T) {
+//TODO move to the config/config_test.go
+// func TestSetupFlattenersConfigOK(t *testing.T) {
 
-	config := models.FlattenersConfig{}
+// 	config := models.FlattenersConfig{}
 
-	err := setupConfig(&config)
+// 	err := setupFlattenersConfig(&config)
 
-	assert.Nil(t, err)
+// 	assert.Nil(t, err)
 
-}
+// }
 
-func TestSetupConfigError(t *testing.T) {
+// func TestSetupFlattenersConfigError(t *testing.T) {
 
-	err := setupConfig(nil)
+// 	err := setupFlattenersConfig(nil)
 
-	assert.NotEqual(t, err, nil)
+// 	assert.NotEqual(t, err, nil)
 
-}
+// }
