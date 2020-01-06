@@ -112,7 +112,7 @@ func TestFormatIncomingMessageNilError(t *testing.T) {
 
 	assert.NotEqual(t, err, nil)
 
-	assert.Equal(t, err.Error(), "Incoming message is empty")
+	assert.Equal(t, err.Error(), "\tIncoming message is empty")
 
 }
 

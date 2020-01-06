@@ -27,15 +27,17 @@ var FlattenersConfig models.FlattenersConfig
 //LogConfig for logging
 var LogConfig models.LogConfig
 
+var (
+	flattenersConfigPath = "./config/flattenersConfig.json"
+	logConfigPath        = "./config/logConfig.json"
+)
+
 func main() {
 
-	log.Traceln("Setting up logging config...")
-	if err := config.InitLogConfig(&LogConfig); err != nil {
+	if err := config.InitLogConfig(logConfigPath, &LogConfig); err != nil {
 		log.Errorf("Setting up log config failed with error: %v\n", err)
 	}
-	log.Traceln("Setting up logging config finished")
 
-	log.Traceln("Opening logging file...")
 	f, err := startLogging(&LogConfig)
 	if err != nil {
 		log.Errorf("Starting logging failed with error: %v\n", err)
@@ -43,11 +45,9 @@ func main() {
 	defer f.Close()
 	log.Traceln("Log file has been opened")
 
-	log.Traceln("Setting up flatteners config...")
-	if err := config.InitFlattenersConfig(&FlattenersConfig); err != nil {
+	if err := config.InitFlattenersConfig(flattenersConfigPath, &FlattenersConfig); err != nil {
 		log.Errorf("Setting up flatteners config failed with error: %v\n", err)
 	}
-	log.Traceln("Setting up flatteners config finished")
 
 	log.Traceln("Setting up producer...")
 	if err := setupProducer([]string{FlattenersConfig.BrokerAddress}, &Producer); err != nil {
@@ -139,12 +139,12 @@ func main() {
 
 func startLogging(logConfig *models.LogConfig) (*os.File, error) {
 
-	log.Traceln("Logs file is opening...")
+	log.Traceln("\tLog file is opening...")
 	f, err := os.OpenFile(logConfig.LogFilePath, os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
 		return nil, err
 	}
-	log.Traceln("Logs file is has been opend")
+	log.Traceln("\tLog file is has been opend")
 
 	log.SetOutput(f)
 
@@ -176,7 +176,7 @@ func startLogging(logConfig *models.LogConfig) (*os.File, error) {
 		logLevel = "Info"
 		log.SetLevel(log.InfoLevel)
 	}
-	log.Infof("Log level has been set to %s", logLevel)
+	log.Infof("\tLog level has been set to %s", logLevel)
 
 	return f, err
 }
@@ -184,7 +184,7 @@ func startLogging(logConfig *models.LogConfig) (*os.File, error) {
 func setupProducer(brokerAddress []string, producer *sarama.SyncProducer) error {
 
 	if producer == nil {
-		return errors.New("Producer value is empty")
+		return errors.New("\tProducer value is empty")
 	}
 
 	producerBrokers := brokerAddress
@@ -210,7 +210,7 @@ func setupProducer(brokerAddress []string, producer *sarama.SyncProducer) error 
 func setupConsumer(brokerAddress []string, incomingTopics []string, consumer **cluster.Consumer) error {
 
 	if consumer == nil {
-		return errors.New("Consumer value is empty")
+		return errors.New("\tConsumer value is empty")
 	}
 
 	// init (custom) config, enable errors and notifications
@@ -234,7 +234,7 @@ func setupConsumer(brokerAddress []string, incomingTopics []string, consumer **c
 func formatIncomingMessage(incomingMessage *models.IncomingMessage) ([]models.DestinationMessage, error) {
 
 	if incomingMessage == nil {
-		return nil, errors.New("Incoming message is empty")
+		return nil, errors.New("\tIncoming message is empty")
 	}
 
 	destinationMessages := make([]models.DestinationMessage, 0)

@@ -6,52 +6,52 @@ import (
 	"path/filepath"
 
 	"github.com/KafkaService/api/models"
-)
-
-var (
-	flattenersConfigPath = "./config/flattenersConfig.json"
-
-	logConfigPath = "./config/logConfig.json"
+	log "github.com/sirupsen/logrus"
 )
 
 //InitFlattenersConfig read basic flattener's config with input and destination topics
-func InitFlattenersConfig(config *models.FlattenersConfig) error {
+func InitFlattenersConfig(flattenersConfigPath string, config *models.FlattenersConfig) error {
+
+	log.Traceln("Setting up flatteners config...")
 
 	configFile, err := filepath.Abs(flattenersConfigPath)
 	if err != nil {
 		return err
 	}
 
-	yamlConfig, err := ioutil.ReadFile(configFile)
+	jsonConfig, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(yamlConfig, config)
+	err = json.Unmarshal(jsonConfig, config)
 	if err != nil {
 		return err
 	}
+	log.Traceln("Setting up flatteners config finished")
 
-	return err
+	return nil
 }
 
 //InitLogConfig read basic log config with configFilePath and logging level
-func InitLogConfig(config *models.LogConfig) error {
+func InitLogConfig(logConfigPath string, config *models.LogConfig) error {
 
+	log.Traceln("Setting up logging config...")
 	configFile, err := filepath.Abs(logConfigPath)
 	if err != nil {
 		return err
 	}
 
-	yamlConfig, err := ioutil.ReadFile(configFile)
+	jsonConfig, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(yamlConfig, config)
+	err = json.Unmarshal(jsonConfig, config)
 	if err != nil {
 		return err
 	}
+	log.Traceln("Setting up logging config finished")
 
-	return err
+	return nil
 }
