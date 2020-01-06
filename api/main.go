@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/KafkaService/api/models"
 	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
+	log "github.com/sirupsen/logrus"
 )
 
 //Producer for publishing
@@ -21,27 +21,49 @@ var Producer sarama.SyncProducer
 //Consumer for subscribing
 var Consumer *cluster.Consumer
 
-//Config for flatteners communication with kafka
-var Config models.FlattenersConfig
+//FlattenersConfig for flatteners communication with kafka
+var FlattenersConfig models.FlattenersConfig
+
+//LogConfig for logging
+var LogConfig models.LogConfig
+
+var (
+	flattenersConfigPath = "./config/flattenersConfig.json"
+	logConfigPath        = "./config/logConfig.json"
+)
 
 func main() {
 
-	if err := setupConfig(&Config); err != nil {
-		fmt.Println(err)
+	if err := config.InitLogConfig(logConfigPath, &LogConfig); err != nil {
+		log.Errorf("Setting up log config failed with error: %v\n", err)
 	}
 
-	if err := setupProducer([]string{Config.BrokerAddress}); err != nil {
-		fmt.Println(err)
+	f, err := startLogging(&LogConfig)
+	if err != nil {
+		log.Errorf("Starting logging failed with error: %v\n", err)
+	}
+	defer f.Close()
+	log.Traceln("Log file has been opened")
+
+	if err := config.InitFlattenersConfig(flattenersConfigPath, &FlattenersConfig); err != nil {
+		log.Errorf("Setting up flatteners config failed with error: %v\n", err)
+	}
+
+	log.Traceln("Setting up producer...")
+	if err := setupProducer([]string{FlattenersConfig.BrokerAddress}, &Producer); err != nil {
+		log.Errorf("Setting up producer failed with error: %v\n", err)
 	}
 
 	defer func() {
 		if err := Producer.Close(); err != nil {
-			fmt.Println(err)
+			log.Infof("Connection with producer has been closed: %v\n", err)
 		}
 	}()
+	log.Traceln("Producer has been started")
 
-	if err := setupConsumer([]string{Config.BrokerAddress}); err != nil {
-		fmt.Println(err)
+	log.Traceln("Setting up Consumer...")
+	if err := setupConsumer([]string{FlattenersConfig.BrokerAddress}, FlattenersConfig.InputTopics, &Consumer); err != nil {
+		log.Error(fmt.Sprintf("Setting up consumer failed with error: %v", err))
 	}
 
 	defer Consumer.Close()
@@ -53,49 +75,60 @@ func main() {
 	// consume errors
 	go func() {
 		for err := range Consumer.Errors() {
-			log.Printf("Error: %s\n", err.Error())
+			log.Errorf("Consumer error: %s\n", err.Error())
 		}
 	}()
 
 	// consume notifications
 	go func() {
 		for ntf := range Consumer.Notifications() {
-			log.Printf("Rebalanced: %+v\n", ntf)
+			log.Infof("Rebalanced: %+v\n", ntf)
 		}
 	}()
+	log.Traceln("Consumer has been started")
 
+	log.Traceln("Waiting for messages...")
 	// consume messages, watch signals
 	for {
 		select {
 		case msg, ok := <-Consumer.Messages():
 			if ok {
-				fmt.Fprintf(os.Stdout, "%s/%d/%d\t%s\t%s\n", msg.Topic, msg.Partition, msg.Offset, msg.Key, msg.Value)
+				log.Tracef("New incoming message")
+				log.Infof("%s/%d/%d\t%s\n", msg.Topic, msg.Partition, msg.Offset, msg.Key)
 				var incomingMessage models.IncomingMessage
 
+				log.Traceln("Decoding incoming message...")
 				err := json.NewDecoder(bytes.NewReader(msg.Value)).Decode(&incomingMessage)
 				if err != nil {
-					fmt.Printf("Error is %v\n", err)
+					log.Warnf("Error while decoding incoming message: %v\n", err)
 					break
 				}
+				log.Tracef("Incoming message has beed decoded properly: %v\n", incomingMessage)
 
-				fmt.Printf("\n\n %v \n\n", incomingMessage)
+				log.Traceln("Formatting incoming message to destination message...")
 				resp, err := formatIncomingMessage(&incomingMessage)
 				if err != nil {
-					fmt.Printf("Error is %v\n", err)
+					log.Warnf("Error while formatting incoming message: %v\n", err)
 					break
 				}
+				log.Tracef("Formatting incoming message to destination message finished: %v\n", incomingMessage)
 
-				fmt.Println(resp)
-
+				log.Traceln("Formatting destination message before sending to the kafka broker...")
 				message, err := json.Marshal(resp)
 				if err != nil {
-					fmt.Printf("Error is %v\n", err)
+					log.Warnf("Error while formatting destination message: %v\n", err)
 					break
 				}
-				for _, v := range Config.DestinationTopics {
-					sendMessage(v, string(message))
+				log.Traceln("Formatting destination message finished")
+
+				log.Traceln("Sending messages to the kafka")
+				for _, v := range FlattenersConfig.DestinationTopics {
+					if err = sendMessage(v, string(message)); err != nil {
+						log.Error(err.Error())
+					}
 				}
 				Consumer.MarkOffset(msg, "") // mark message as processed
+				log.Traceln("Sending has been finished")
 			}
 		case <-signals:
 			return
@@ -104,18 +137,55 @@ func main() {
 
 }
 
-func setupConfig(flatterConfig *models.FlattenersConfig) error {
+func startLogging(logConfig *models.LogConfig) (*os.File, error) {
 
-	err := config.InitFlattenersConfig(flatterConfig)
+	log.Traceln("\tLog file is opening...")
+	f, err := os.OpenFile(logConfig.LogFilePath, os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	log.Traceln("\tLog file is has been opend")
 
-	return nil
+	log.SetOutput(f)
 
+	var logLevel string
+
+	switch logConfig.LogLevel {
+	case "Trace":
+		logLevel = "Trace"
+		log.SetLevel(log.TraceLevel)
+	case "Debug":
+		logLevel = "Debug"
+		log.SetLevel(log.DebugLevel)
+	case "Info":
+		logLevel = "Info"
+		log.SetLevel(log.InfoLevel)
+	case "Warn":
+		logLevel = "Warn"
+		log.SetLevel(log.WarnLevel)
+	case "Error":
+		logLevel = "Error"
+		log.SetLevel(log.ErrorLevel)
+	case "Fatal":
+		logLevel = "Fatal"
+		log.SetLevel(log.FatalLevel)
+	case "Panic":
+		logLevel = "Panic"
+		log.SetLevel(log.PanicLevel)
+	default:
+		logLevel = "Info"
+		log.SetLevel(log.InfoLevel)
+	}
+	log.Infof("\tLog level has been set to %s", logLevel)
+
+	return f, err
 }
 
-func setupProducer(brokerAddress []string) error {
+func setupProducer(brokerAddress []string, producer *sarama.SyncProducer) error {
+
+	if producer == nil {
+		return errors.New("\tProducer value is empty")
+	}
 
 	producerBrokers := brokerAddress
 	//setup relevant config info
@@ -125,32 +195,37 @@ func setupProducer(brokerAddress []string) error {
 	producerConfig.Producer.Return.Successes = true
 	producerConfig.Producer.Return.Errors = true
 
-	producer, err := sarama.NewSyncProducer(producerBrokers, producerConfig)
+	log.Traceln("\tCreating sync producer...")
+	newProducer, err := sarama.NewSyncProducer(producerBrokers, producerConfig)
 	if err != nil {
 		return err
 	}
 
-	Producer = producer
+	*producer = newProducer
+	log.Traceln("\tSync producer has been created")
 
 	return nil
 }
 
-func setupConsumer(brokerAddress []string) error {
+func setupConsumer(brokerAddress []string, incomingTopics []string, consumer **cluster.Consumer) error {
+
+	if consumer == nil {
+		return errors.New("\tConsumer value is empty")
+	}
 
 	// init (custom) config, enable errors and notifications
 	config := cluster.NewConfig()
 	config.Consumer.Return.Errors = true
 	config.Group.Return.Notifications = true
 
-	// init consumer
-	brokers := brokerAddress
-	topics := []string{"test1"}
-	consumer, err := cluster.NewConsumer(brokers, "my-consumer-group", topics, config)
+	log.Traceln("\tCreating consumer...")
+	newConsumer, err := cluster.NewConsumer(brokerAddress, "my-consumer-group", incomingTopics, config)
 	if err != nil {
 		return err
 	}
 
-	Consumer = consumer
+	*consumer = newConsumer
+	log.Traceln("\tConsumer has been created")
 
 	return nil
 }
@@ -159,33 +234,39 @@ func setupConsumer(brokerAddress []string) error {
 func formatIncomingMessage(incomingMessage *models.IncomingMessage) ([]models.DestinationMessage, error) {
 
 	if incomingMessage == nil {
-		return nil, errors.New("Incoming message is empty")
+		return nil, errors.New("\tIncoming message is empty")
 	}
 
-	destinationMessages := make([]models.DestinationMessage, len(incomingMessage.Message.Partitions))
+	destinationMessages := make([]models.DestinationMessage, 0)
 
 	for i := 0; i < len(incomingMessage.Message.Partitions); i++ {
-		destinationMessages[i].Data.Name = incomingMessage.Message.Partitions[i].Name
-		destinationMessages[i].Data.DriveType = incomingMessage.Message.Partitions[i].DriveType
-		destinationMessages[i].Data.UsedSpaceBytes = incomingMessage.Message.Partitions[i].Metric.UsedSpaceBytes
-		destinationMessages[i].Data.TotalSpaceBytes = incomingMessage.Message.Partitions[i].Metric.TotalSpaceBytes
-		destinationMessages[i].Data.CreateAtTimeUTC = incomingMessage.Message.CreateAtTimeUTC
+		destinationMessages = append(destinationMessages, models.DestinationMessage{
+			Data: models.Data{
+				Name:            incomingMessage.Message.Partitions[i].Name,
+				DriveType:       incomingMessage.Message.Partitions[i].DriveType,
+				UsedSpaceBytes:  incomingMessage.Message.Partitions[i].Metric.UsedSpaceBytes,
+				TotalSpaceBytes: incomingMessage.Message.Partitions[i].Metric.TotalSpaceBytes,
+				CreateAtTimeUTC: incomingMessage.Message.CreateAtTimeUTC,
+			},
+		})
 	}
 
 	return destinationMessages, nil
 }
 
-func sendMessage(topic string, message string) {
+func sendMessage(topic string, message string) error {
 
 	msg := &sarama.ProducerMessage{
 		Topic: topic,
 		Value: sarama.StringEncoder(message),
 	}
 
+	log.Traceln("\tSending message...")
 	partition, offset, err := Producer.SendMessage(msg)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
-	fmt.Printf("Message is stored in topic(%s)/partition(%d)/offset(%d)\n\n", topic, partition, offset)
+	log.Infof("\tMessage is stored in topic(%s)/partition(%d)/offset(%d)\n\n", topic, partition, offset)
 
+	return nil
 }

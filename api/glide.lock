@@ -1,5 +1,5 @@
-hash: 50a48f7988a00ca054aa0b2adb1e7932e24d56b984d61d1888bc23b9b319f570
-updated: 2020-01-01T16:16:00.890912279+02:00
+hash: 7ca91f661a2b1ed84eca37f28c9af5be8a3cd2d11a3f58b7ccc96d99161aa30b
+updated: 2020-01-03T11:44:51.234277453+02:00
 imports:
 - name: github.com/bsm/sarama-cluster
   version: c618e605e15c0d7535f6c96ff8efbb0dba4fd66c
@@ -32,6 +32,8 @@ imports:
   - snappy
   - zstd
   - zstd/internal/xxhash
+- name: github.com/konsorten/go-windows-terminal-sequences
+  version: f55edac94c9bbba5d6182a4be46d86a2c9b5b50e
 - name: github.com/pierrec/lz4
   version: 9085dacd1e1eca033047a5514195779360363ced
   subpackages:
@@ -40,6 +42,8 @@ imports:
   version: cac0b30c2563378d434b5af411844adff8e32960
 - name: github.com/Shopify/sarama
   version: 675b0b1ff204c259877004140a540d6adf38db17
+- name: github.com/sirupsen/logrus
+  version: 67a7fdcf741f4d5cee82cb9800994ccfd4393ad0
 - name: golang.org/x/crypto
   version: becbf705a91575484002d598f87d74f0002801e7
   subpackages:
@@ -50,6 +54,10 @@ imports:
   subpackages:
   - internal/socks
   - proxy
+- name: golang.org/x/sys
+  version: c96a22e43c9c1088b5e506727c975511357d9f68
+  subpackages:
+  - unix
 - name: gopkg.in/jcmturner/aescts.v1
   version: f6abebb3171c4c1b1fea279cb7c7325020a26290
 - name: gopkg.in/jcmturner/dnsutils.v1
@@ -94,4 +102,12 @@ imports:
   - ndr
 - name: gopkg.in/yaml.v2
   version: 1f64d6156d11335c3f22d9330b0ad14fc1e789ce
-testImports: []
+testImports:
+- name: github.com/pmezard/go-difflib
+  version: 5d4384ee4fb2527b0a1256a821ebfc92f91efefc
+  subpackages:
+  - difflib
+- name: github.com/stretchr/testify
+  version: 858f37ff9bc48070cde7f2c2895dbe0db1ad9326
+  subpackages:
+  - assert
